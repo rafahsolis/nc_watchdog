@@ -96,7 +96,8 @@ is_local_https_working() {
 }
 
 should_reboot_now() {
-    ! is_external_https_working && ! is_local_https_working && ! is_port_listening
+    # Trigger failure if either external or local HTTPS is NOT working
+    ! is_external_https_working || ! is_local_https_working
 }
 
 set_status() {
@@ -174,6 +175,12 @@ handle_service_recovery() {
 
 run_monitoring_loop() {
     for i in $(seq 1 "$RETRIES"); do
+        if ! is_external_https_working; then
+            log "Intento ${i}/${RETRIES}: fallo externo (no conecta a ${DOMAIN} desde fuera)."
+        fi
+        if ! is_local_https_working; then
+            log "Intento ${i}/${RETRIES}: fallo local (no conecta a ${DOMAIN} desde localhost)."
+        fi
         if should_reboot_now; then
             log "Intento ${i}/${RETRIES}: fallo persistente."
             (( i < RETRIES )) && { sleep "$SLEEP_BETWEEN"; continue; }
